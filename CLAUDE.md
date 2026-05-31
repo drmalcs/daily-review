@@ -1,0 +1,1 @@
+@~/.claude/learnings-software.md
