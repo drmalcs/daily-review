@@ -4,7 +4,7 @@ A macOS menu bar app for daily spaced repetition learning, driven by a personal 
 
 ![Daily Review panel showing questions with answers revealed and SRS rating buttons](screenshots/panel-questions.png)
 
-*Questions in various states: answered with GOT IT, answer revealed with rating buttons, and unrevealed cards showing REVEAL.*
+*A revealed card showing AGAIN / HARD / GOT IT / BORING / DISCUSS buttons, alongside unrevealed cards. The banner indicates carryover questions from the previous day.*
 
 ![Panel with topic input box and a question added to wiki](screenshots/panel-topic-input.png)
 
