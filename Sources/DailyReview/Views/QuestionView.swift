@@ -1,9 +1,19 @@
 import SwiftUI
 
+private enum DiscussPhase: Equatable {
+    case off
+    case inputting
+    case loading
+    case answered(String)
+}
+
 struct QuestionView: View {
     let question: Question
     @EnvironmentObject var store: AppStore
     @State private var isAddingToWiki = false
+    @State private var discussPhase: DiscussPhase = .off
+    @State private var followUpText: String = ""
+    @FocusState private var followUpFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -17,15 +27,35 @@ struct QuestionView: View {
 
             if question.isRevealed {
                 Divider().opacity(0.3)
-                Text(question.answer)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.answerColor)
-                    .fixedSize(horizontal: false, vertical: true)
 
-                if let rating = question.srsRating {
-                    ratedFooter(rating: rating)
+                if case .answered(let text) = discussPhase {
+                    Text(text)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.answerColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                    backButton
+                } else if discussPhase == .loading {
+                    HStack(spacing: 6) {
+                        ProgressView().scaleEffect(0.65)
+                        Text("Thinking…")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Theme.muted)
+                    }
+                    .padding(.vertical, 6)
                 } else {
-                    ratingButtons
+                    Text(question.answer)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.answerColor)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let rating = question.srsRating {
+                        ratedFooter(rating: rating)
+                    } else {
+                        ratingButtons
+                        if discussPhase == .inputting {
+                            discussInput
+                        }
+                    }
                 }
             } else {
                 Text("REVEAL")
@@ -48,9 +78,72 @@ struct QuestionView: View {
 
     private var ratingButtons: some View {
         HStack(spacing: 8) {
-            ratingButton("AGAIN", rating: .miss,  color: Theme.danger)
-            ratingButton("HARD",  rating: .hazy,  color: Theme.muted)
-            ratingButton("GOT IT", rating: .solid, color: Theme.answerColor)
+            ratingButton("AGAIN",  rating: .miss,   color: Theme.danger)
+            ratingButton("HARD",   rating: .hazy,   color: Theme.muted)
+            ratingButton("GOT IT", rating: .solid,  color: Theme.answerColor)
+            ratingButton("BORING", rating: .boring, color: Theme.boring)
+            Spacer()
+            Button("DISCUSS") { discussPhase = .inputting }
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Theme.accent)
+                .buttonStyle(.plain)
+        }
+    }
+
+    private var discussInput: some View {
+        HStack(spacing: 6) {
+            TextField("Ask a follow-up…", text: $followUpText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .padding(5)
+                .background(Theme.background)
+                .cornerRadius(4)
+                .focused($followUpFocused)
+                .onSubmit { submitFollowUp() }
+
+            Button("Ask") { submitFollowUp() }
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Theme.accent)
+                .buttonStyle(.plain)
+                .disabled(followUpText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            Button("✕") {
+                discussPhase = .off
+                followUpText = ""
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(Theme.muted)
+            .buttonStyle(.plain)
+        }
+        .padding(.top, 4)
+        .onAppear {
+            // MenuBarExtra panels dismiss when a text field claims keyboard focus
+            // unless we explicitly make the window key first.
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.first { $0.isVisible && $0.canBecomeKey }?.makeKey()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                followUpFocused = true
+            }
+        }
+    }
+
+    private var backButton: some View {
+        Button("← BACK") {
+            discussPhase = .off
+            followUpText = ""
+        }
+        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+        .foregroundStyle(Theme.muted)
+        .buttonStyle(.plain)
+    }
+
+    private func submitFollowUp() {
+        let q = followUpText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return }
+        discussPhase = .loading
+        Task {
+            let answer = await store.askFollowUp(question: question, followUp: q)
+            discussPhase = .answered(answer)
         }
     }
 
@@ -125,17 +218,19 @@ struct QuestionView: View {
 
     private func ratingLabel(_ rating: SRSRating) -> String {
         switch rating {
-        case .miss:  return "AGAIN"
-        case .hazy:  return "HARD"
-        case .solid: return "GOT IT"
+        case .miss:   return "AGAIN"
+        case .hazy:   return "HARD"
+        case .solid:  return "GOT IT"
+        case .boring: return "BORING"
         }
     }
 
     private func ratingColor(_ rating: SRSRating) -> Color {
         switch rating {
-        case .miss:  return Theme.danger
-        case .hazy:  return Theme.muted
-        case .solid: return Theme.answerColor
+        case .miss:   return Theme.danger
+        case .hazy:   return Theme.muted
+        case .solid:  return Theme.answerColor
+        case .boring: return Theme.boring
         }
     }
 }

@@ -58,8 +58,8 @@ $WIKI_CONTENT
 RULES:
 1. Keep every question where srsRating is null or absent EXACTLY as-is.
 2. Keep every question where srsRating is "miss" or "hazy" — the user needs to retry it. Reset it: set srsRating to null and isRevealed to false. All other fields stay unchanged (same id, text, answer, type, isAddedToWiki).
-3. For every question where srsRating is "solid", generate a replacement:
-   - wiki questions: test a concept from the wiki that is NOT covered by any kept question
+3. For every question where srsRating is "solid" or "boring", generate a replacement:
+   - wiki questions: test a concept from the wiki that is NOT covered by any kept question. If the replaced question was rated "boring", choose a concept from a noticeably different subject area.
    - nonWiki questions: introduce knowledge that EXTENDS the wiki — choose adjacent or deeper concepts not yet present in any wiki file. If topicForTomorrow is set and non-empty, generate questions specifically about that topic instead.
 4. Total questions must equal wikiQuestionCount + nonWikiQuestionCount from the session.
    If the session is empty or missing those fields, default to 5 wiki + 2 nonWiki.

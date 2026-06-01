@@ -6,7 +6,7 @@ enum QuestionType: String, Codable, Sendable {
 }
 
 enum SRSRating: String, Codable, Sendable {
-    case miss, hazy, solid
+    case miss, hazy, solid, boring
 }
 
 struct Question: Codable, Identifiable, Sendable, Equatable {

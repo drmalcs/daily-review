@@ -157,6 +157,47 @@ final class AppStore: ObservableObject {
         saveSession()
     }
 
+    func askFollowUp(question: Question, followUp: String) async -> String {
+        let prompt = """
+        Spaced repetition flashcard context:
+        Q: \(question.text)
+        A: \(question.answer)
+
+        Follow-up question: \(followUp)
+
+        Answer the follow-up directly and concisely (2-4 sentences). No preamble.
+        """
+
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+
+        return await withCheckedContinuation { continuation in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: shell)
+            process.arguments = ["-l", "-c", "claude -p \"$DR_PROMPT\" --allowedTools WebSearch"]
+
+            var env = ProcessInfo.processInfo.environment
+            env["DR_PROMPT"] = prompt
+            process.environment = env
+
+            let outPipe = Pipe()
+            process.standardOutput = outPipe
+            process.standardError = Pipe()
+
+            process.terminationHandler = { _ in
+                let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+                let result = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                continuation.resume(returning: result.isEmpty ? "No response received." : result)
+            }
+
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(returning: "Could not start Claude: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func runGenerateScript() async {
         guard !isRefreshing else { return }
         isRefreshing = true

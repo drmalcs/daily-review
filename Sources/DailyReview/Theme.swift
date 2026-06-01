@@ -8,5 +8,6 @@ enum Theme {
     static let wikiBadge    = Color(red: 0.40, green: 0.70, blue: 0.95)
     static let nonWikiBadge = Color(red: 0.90, green: 0.65, blue: 0.25)
     static let danger       = Color(red: 0.90, green: 0.35, blue: 0.35)
+    static let boring       = Color(red: 0.65, green: 0.52, blue: 0.22)
     static let muted        = Color(red: 0.55, green: 0.60, blue: 0.70)
 }
