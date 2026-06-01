@@ -2,7 +2,9 @@ import Foundation
 
 enum Config {
     static func loadDotEnv() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
+            "\(home)/.dailyreview/.env",
             FileManager.default.currentDirectoryPath + "/.env",
             (Bundle.main.bundlePath as NSString).deletingLastPathComponent + "/.env",
         ]
@@ -27,6 +29,9 @@ enum Config {
 
     static var wikiPath: String {
         if let path = UserDefaults.standard.string(forKey: "wikiPath"), !path.isEmpty {
+            return path
+        }
+        if let ptr = getenv("WIKI_PATH"), let path = String(validatingCString: ptr), !path.isEmpty {
             return path
         }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
