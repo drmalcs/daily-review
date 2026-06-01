@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject var store: AppStore
     @State private var wikiPath: String = Config.wikiPath
     @State private var wikiPathSaved = false
+    @State private var newTopicText: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,13 +22,17 @@ struct SettingsView: View {
                     questionCountSection
                     Divider()
                     wikiPathSection
+                    Divider()
+                    topicsSection
                 }
                 .padding()
             }
         }
-        .frame(width: 400, height: 280)
+        .frame(width: 400, height: 520)
         .preferredColorScheme(.dark)
     }
+
+    // MARK: - Question counts
 
     private var questionCountSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -60,6 +65,8 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Wiki path
+
     private var wikiPathSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Wiki folder").font(.subheadline).bold()
@@ -89,5 +96,84 @@ struct SettingsView: View {
                 .foregroundStyle(accessible ? Theme.answerColor : Theme.danger)
             }
         }
+    }
+
+    // MARK: - Topics
+
+    private var topicsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("New-knowledge topics").font(.subheadline).bold()
+            Text("Each new-knowledge question independently picks one active topic at random. Paused topics are excluded.")
+                .font(.caption).foregroundStyle(.secondary)
+
+            HStack(spacing: 6) {
+                TextField("Add a topic…", text: $newTopicText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.caption)
+                    .onSubmit { submitTopic() }
+
+                Button("Add") { submitTopic() }
+                    .font(.caption)
+                    .disabled(newTopicText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+
+            if store.topics.isEmpty {
+                Text("No topics yet. Questions will extend the wiki content.")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.muted)
+                    .padding(.top, 2)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(store.topics) { topic in
+                        topicRow(topic)
+                        if topic.id != store.topics.last?.id {
+                            Divider().opacity(0.3)
+                        }
+                    }
+                }
+                .background(Theme.cardBg)
+                .cornerRadius(6)
+            }
+        }
+    }
+
+    private func topicRow(_ topic: Topic) -> some View {
+        HStack(spacing: 8) {
+            Text(topic.text)
+                .font(.caption)
+                .foregroundStyle(topic.isPaused ? Theme.muted : .primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Pause button — glows when active (topic IS paused) to signal click will un-pause
+            Button {
+                store.togglePause(id: topic.id)
+            } label: {
+                Image(systemName: topic.isPaused ? "pause.circle.fill" : "pause.circle")
+                    .font(.caption)
+                    .foregroundStyle(topic.isPaused ? Theme.accent : Theme.muted)
+                    .shadow(color: topic.isPaused ? Theme.accent.opacity(0.8) : .clear, radius: 4)
+            }
+            .buttonStyle(.plain)
+            .help(topic.isPaused ? "Un-pause topic" : "Pause topic")
+
+            Button {
+                store.deleteTopic(id: topic.id)
+            } label: {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .foregroundStyle(Theme.danger)
+            }
+            .buttonStyle(.plain)
+            .help("Delete topic")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+
+    private func submitTopic() {
+        let trimmed = newTopicText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        store.addTopic(trimmed)
+        newTopicText = ""
     }
 }

@@ -14,18 +14,22 @@ struct Question: Codable, Identifiable, Sendable, Equatable {
     var text: String
     var answer: String
     var type: QuestionType
+    var topic: String = ""         // set for nonWiki questions; used when adding to wiki
     var isRevealed: Bool = false
     var isAddedToWiki: Bool = false
     var srsRating: SRSRating? = nil
+}
+
+struct Topic: Codable, Identifiable, Sendable, Equatable {
+    var id: UUID = UUID()
+    var text: String
+    var isPaused: Bool = false
 }
 
 struct DaySession: Codable, Sendable {
     var dateString: String
     var wikiQuestions: [Question]
     var nonWikiQuestions: [Question]
-    var topicForTomorrow: String
-    var currentNonWikiTopic: String
-    // Included so the scheduled agent knows the targets without needing UserDefaults
     var wikiQuestionCount: Int
     var nonWikiQuestionCount: Int
 
@@ -43,4 +47,11 @@ struct DaySession: Codable, Sendable {
 
     var allQuestions: [Question] { wikiQuestions + nonWikiQuestions }
     var allRated: Bool { !allQuestions.isEmpty && allQuestions.allSatisfy { $0.srsRating != nil } }
+
+    // Decode gracefully — old sessions may have topicForTomorrow/currentNonWikiTopic
+    enum CodingKeys: String, CodingKey {
+        case dateString, wikiQuestions, nonWikiQuestions
+        case wikiQuestionCount, nonWikiQuestionCount
+        // ignored legacy keys: topicForTomorrow, currentNonWikiTopic
+    }
 }
