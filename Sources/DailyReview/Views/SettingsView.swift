@@ -28,7 +28,7 @@ struct SettingsView: View {
                 .padding()
             }
         }
-        .frame(width: 400, height: 520)
+        .frame(width: 400)
         .preferredColorScheme(.dark)
     }
 
@@ -124,14 +124,17 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.muted)
                     .padding(.top, 2)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(store.topics) { topic in
-                        topicRow(topic)
-                        if topic.id != store.topics.last?.id {
-                            Divider().opacity(0.3)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(store.topics) { topic in
+                            topicRow(topic)
+                            if topic.id != store.topics.last?.id {
+                                Divider().opacity(0.3)
+                            }
                         }
                     }
                 }
+                .frame(maxHeight: 200)
                 .background(Theme.cardBg)
                 .cornerRadius(6)
             }
