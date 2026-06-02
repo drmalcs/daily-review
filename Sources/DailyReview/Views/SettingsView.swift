@@ -17,16 +17,14 @@ struct SettingsView: View {
 
             Divider()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    questionCountSection
-                    Divider()
-                    wikiPathSection
-                    Divider()
-                    topicsSection
-                }
-                .padding()
+            VStack(alignment: .leading, spacing: 20) {
+                questionCountSection
+                Divider()
+                wikiPathSection
+                Divider()
+                topicsSection
             }
+            .padding()
         }
         .frame(width: 400)
         .preferredColorScheme(.dark)
