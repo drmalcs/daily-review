@@ -58,7 +58,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Takes effect when questions are next generated (tonight).")
+            Text("Takes effect from tomorrow's questions.")
                 .font(.system(size: 13)).foregroundStyle(.tertiary)
         }
     }

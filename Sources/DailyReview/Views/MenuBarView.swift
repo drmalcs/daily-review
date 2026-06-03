@@ -87,7 +87,7 @@ struct MenuBarView: View {
                 Image(systemName: "moon.stars.fill")
                     .font(.title3)
                     .foregroundStyle(Theme.muted)
-                Text("Tonight's questions haven't been generated yet.")
+                Text("Today's questions haven't been generated yet.")
                     .font(.caption)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
@@ -136,7 +136,7 @@ struct MenuBarView: View {
             noticeRow(icon: "exclamationmark.triangle.fill", message: sessErr, color: Theme.danger)
         }
         if store.awaitingAgent && (!store.wikiQuestions.isEmpty || !store.nonWikiQuestions.isEmpty) {
-            noticeRow(icon: "moon.stars.fill", message: "Showing carryovers — tonight's new questions haven't arrived yet.", color: Theme.muted)
+            noticeRow(icon: "moon.stars.fill", message: "Some unanswered questions carried over from yesterday.", color: Theme.muted)
         }
     }
 
