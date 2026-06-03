@@ -104,29 +104,39 @@ struct MenuBarView: View {
     // MARK: - Question list
 
     private var questionScrollView: some View {
-        ScrollView {
-            VStack(spacing: 1) {
-                notices
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 1) {
+                    notices
 
-                // Wiki questions + topic input after the last one is revealed
-                ForEach(Array(store.wikiQuestions.enumerated()), id: \.element.id) { idx, q in
-                    QuestionView(question: q).environmentObject(store)
+                    ForEach(Array(store.wikiQuestions.enumerated()), id: \.element.id) { idx, q in
+                        QuestionView(question: q, onRequestScroll: { id in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                            }
+                        })
+                        .environmentObject(store)
 
-                    if idx == store.wikiQuestions.count - 1 && store.wikiQuestions.allSatisfy({ $0.srsRating != nil }) {
-                        TopicInputView().environmentObject(store)
+                        if idx == store.wikiQuestions.count - 1 && store.wikiQuestions.allSatisfy({ $0.srsRating != nil }) {
+                            TopicInputView().environmentObject(store)
+                        }
+                    }
+
+                    ForEach(store.nonWikiQuestions) { q in
+                        QuestionView(question: q, onRequestScroll: { id in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                            }
+                        })
+                        .environmentObject(store)
+                    }
+
+                    if store.allRated {
+                        completionBanner
                     }
                 }
-
-                // Non-wiki questions
-                ForEach(store.nonWikiQuestions) { q in
-                    QuestionView(question: q).environmentObject(store)
-                }
-
-                if store.allRated {
-                    completionBanner
-                }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
         }
     }
 

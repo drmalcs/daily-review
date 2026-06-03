@@ -9,6 +9,7 @@ private enum DiscussPhase: Equatable {
 
 struct QuestionView: View {
     let question: Question
+    var onRequestScroll: ((String) -> Void)? = nil
     @EnvironmentObject var store: AppStore
     @State private var isAddingToWiki = false
     @State private var discussPhase: DiscussPhase = .off
@@ -72,6 +73,8 @@ struct QuestionView: View {
             guard !question.isRevealed else { return }
             store.revealAnswer(for: question.id)
         }
+        // Scroll anchor — sits at the bottom of the card for ScrollViewReader targeting
+        Color.clear.frame(height: 0).id("\(question.id)-discuss")
     }
 
     // MARK: - Rating buttons
@@ -83,10 +86,13 @@ struct QuestionView: View {
             ratingButton("GOT IT", rating: .solid,  color: Theme.answerColor)
             ratingButton("BORING", rating: .boring, color: Theme.boring)
             Spacer()
-            Button("DISCUSS") { discussPhase = .inputting }
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Theme.accent)
-                .buttonStyle(.plain)
+            Button("DISCUSS") {
+                discussPhase = .inputting
+                onRequestScroll?("\(question.id)-discuss")
+            }
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundStyle(Theme.accent)
+            .buttonStyle(.plain)
         }
     }
 
