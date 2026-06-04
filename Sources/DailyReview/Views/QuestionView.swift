@@ -98,7 +98,12 @@ struct QuestionView: View {
             }
             .padding(.vertical, 6)
         } else if showELI5, let eli5 = question.eli5Answer {
-            Text(eli5)
+            // Parse as markdown so [title](url) links are clickable
+            let attributed = (try? AttributedString(
+                markdown: eli5,
+                options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+            )) ?? AttributedString(eli5)
+            Text(attributed)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.answerColor)
                 .fixedSize(horizontal: false, vertical: true)
