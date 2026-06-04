@@ -18,18 +18,22 @@ struct Question: Codable, Identifiable, Sendable, Equatable {
     var isRevealed: Bool = false
     var isAddedToWiki: Bool = false
     var srsRating: SRSRating? = nil
+    var eli5Answer: String? = nil       // cached ELI5 explanation (generated on demand)
+    var eli5IsPreferred: Bool = false   // true when user rated AGAIN/HARD while in ELI5 mode
 
-    // Custom decoder so sessions generated before the topic field existed still load.
+    // Custom decoder so sessions generated before any given field existed still load.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id           = try c.decode(UUID.self,         forKey: .id)
-        text         = try c.decode(String.self,       forKey: .text)
-        answer       = try c.decode(String.self,       forKey: .answer)
-        type         = try c.decode(QuestionType.self, forKey: .type)
-        topic        = try c.decodeIfPresent(String.self,    forKey: .topic)        ?? ""
-        isRevealed   = try c.decodeIfPresent(Bool.self,      forKey: .isRevealed)   ?? false
-        isAddedToWiki = try c.decodeIfPresent(Bool.self,     forKey: .isAddedToWiki) ?? false
-        srsRating    = try c.decodeIfPresent(SRSRating.self, forKey: .srsRating)
+        id              = try c.decode(UUID.self,         forKey: .id)
+        text            = try c.decode(String.self,       forKey: .text)
+        answer          = try c.decode(String.self,       forKey: .answer)
+        type            = try c.decode(QuestionType.self, forKey: .type)
+        topic           = try c.decodeIfPresent(String.self,    forKey: .topic)           ?? ""
+        isRevealed      = try c.decodeIfPresent(Bool.self,      forKey: .isRevealed)      ?? false
+        isAddedToWiki   = try c.decodeIfPresent(Bool.self,      forKey: .isAddedToWiki)   ?? false
+        srsRating       = try c.decodeIfPresent(SRSRating.self, forKey: .srsRating)
+        eli5Answer      = try c.decodeIfPresent(String.self,    forKey: .eli5Answer)
+        eli5IsPreferred = try c.decodeIfPresent(Bool.self,      forKey: .eli5IsPreferred) ?? false
     }
 }
 

@@ -15,6 +15,17 @@ struct QuestionView: View {
     @State private var discussPhase: DiscussPhase = .off
     @State private var followUpText: String = ""
     @FocusState private var followUpFocused: Bool
+    @State private var showELI5: Bool
+    @State private var eli5Loading = false
+
+    init(question: Question, onRequestScroll: ((String) -> Void)? = nil) {
+        self.question = question
+        self.onRequestScroll = onRequestScroll
+        // Auto-show ELI5 on load if user previously rated AGAIN/HARD while in ELI5 mode
+        _showELI5 = State(initialValue: question.isRevealed
+                          && question.eli5IsPreferred
+                          && question.eli5Answer != nil)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -44,10 +55,7 @@ struct QuestionView: View {
                     }
                     .padding(.vertical, 6)
                 } else {
-                    Text(question.answer)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.answerColor)
-                        .fixedSize(horizontal: false, vertical: true)
+                    answerArea
 
                     if let rating = question.srsRating {
                         ratedFooter(rating: rating)
@@ -73,14 +81,45 @@ struct QuestionView: View {
             guard !question.isRevealed else { return }
             store.revealAnswer(for: question.id)
         }
-        // Scroll anchor — sits at the bottom of the card for ScrollViewReader targeting
+        // Scroll anchor for ScrollViewReader targeting
         Color.clear.frame(height: 0).id("\(question.id)-discuss")
+    }
+
+    // MARK: - Answer area
+
+    @ViewBuilder
+    private var answerArea: some View {
+        if showELI5 && eli5Loading {
+            HStack(spacing: 6) {
+                ProgressView().scaleEffect(0.65)
+                Text("Simplifying…")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Theme.muted)
+            }
+            .padding(.vertical, 6)
+        } else if showELI5, let eli5 = question.eli5Answer {
+            Text(eli5)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.answerColor)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        } else {
+            Text(question.answer)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.answerColor)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // MARK: - Rating buttons
 
     private var ratingButtons: some View {
         HStack(spacing: 8) {
+            Button("ELI5") { handleELI5Tap() }
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(showELI5 ? Theme.accent : Theme.muted)
+                .buttonStyle(.plain)
+                .disabled(eli5Loading)
             ratingButton("AGAIN",  rating: .miss,   color: Theme.danger)
             ratingButton("HARD",   rating: .hazy,   color: Theme.muted)
             ratingButton("GOT IT", rating: .solid,  color: Theme.answerColor)
@@ -143,6 +182,24 @@ struct QuestionView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Actions
+
+    private func handleELI5Tap() {
+        guard !eli5Loading else { return }
+        if showELI5 {
+            showELI5 = false
+            return
+        }
+        showELI5 = true
+        guard question.eli5Answer == nil else { return }
+        eli5Loading = true
+        Task {
+            let answer = await store.generateELI5(question: question)
+            store.setELI5Answer(id: question.id, answer: answer)
+            eli5Loading = false
+        }
+    }
+
     private func submitFollowUp() {
         let q = followUpText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return }
@@ -155,7 +212,17 @@ struct QuestionView: View {
 
     private func ratingButton(_ label: String, rating: SRSRating, color: Color) -> some View {
         Button(label) {
-            Task { await store.rateQuestion(id: question.id, rating: rating) }
+            // eli5IsPreferred = true only for carryover ratings (AGAIN/HARD) while ELI5 is showing.
+            // This causes ELI5 to be shown by default next time the question appears.
+            let wasInELI5 = showELI5
+            showELI5 = false
+            Task {
+                await store.rateQuestion(
+                    id: question.id,
+                    rating: rating,
+                    eli5IsPreferred: wasInELI5 && (rating == .miss || rating == .hazy)
+                )
+            }
         }
         .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(color)
@@ -167,7 +234,6 @@ struct QuestionView: View {
     @ViewBuilder
     private func ratedFooter(rating: SRSRating) -> some View {
         HStack(spacing: 12) {
-            // Show which rating was chosen
             Text(ratingLabel(rating))
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .foregroundStyle(ratingColor(rating).opacity(0.6))

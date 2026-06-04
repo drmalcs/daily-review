@@ -152,15 +152,72 @@ final class AppStore: ObservableObject {
         saveSession()
     }
 
-    func rateQuestion(id: UUID, rating: SRSRating) async {
+    func rateQuestion(id: UUID, rating: SRSRating, eli5IsPreferred: Bool = false) async {
         if let i = wikiQuestions.firstIndex(where: { $0.id == id }) {
             wikiQuestions[i].srsRating = rating
+            wikiQuestions[i].eli5IsPreferred = eli5IsPreferred
             saveSession()
         } else if let i = nonWikiQuestions.firstIndex(where: { $0.id == id }) {
             nonWikiQuestions[i].srsRating = rating
+            nonWikiQuestions[i].eli5IsPreferred = eli5IsPreferred
             saveSession()
             if rating == .solid {
                 await addToWiki(question: nonWikiQuestions[i])
+            }
+        }
+    }
+
+    func setELI5Answer(id: UUID, answer: String) {
+        if let i = wikiQuestions.firstIndex(where: { $0.id == id }) {
+            wikiQuestions[i].eli5Answer = answer
+        } else if let i = nonWikiQuestions.firstIndex(where: { $0.id == id }) {
+            nonWikiQuestions[i].eli5Answer = answer
+        }
+        saveSession()
+    }
+
+    func generateELI5(question: Question) async -> String {
+        let prompt = """
+        A student is struggling to understand a flashcard answer. Give them a clearer, more accessible explanation.
+
+        Question: \(question.text)
+        Standard answer: \(question.answer)
+
+        Write an ELI5 (Explain Like I'm 5) style explanation:
+        - Use simple language, analogies, and concrete real-world examples
+        - You may write more than the original answer if depth genuinely helps
+        - Search the web and include links to helpful explainer articles, YouTube videos, or visual resources where they would make the concept click (prefer well-known sources)
+        - End with a brief "In short:" summary sentence
+
+        Start directly with the explanation — no preamble.
+        """
+
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+
+        return await withCheckedContinuation { continuation in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: shell)
+            process.arguments = ["-l", "-c", "claude -p \"$DR_PROMPT\" --allowedTools WebSearch"]
+
+            var env = ProcessInfo.processInfo.environment
+            env["DR_PROMPT"] = prompt
+            process.environment = env
+
+            let outPipe = Pipe()
+            process.standardOutput = outPipe
+            process.standardError = Pipe()
+
+            process.terminationHandler = { _ in
+                let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+                let result = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                continuation.resume(returning: result.isEmpty ? "No response received." : result)
+            }
+
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(returning: "Could not start Claude: \(error.localizedDescription)")
             }
         }
     }
