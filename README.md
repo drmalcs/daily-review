@@ -2,9 +2,9 @@
 
 A macOS menu bar app for daily spaced repetition learning, driven by a personal knowledge wiki and AI-generated questions.
 
-![Daily Review panel showing questions with ELI5 active and the Discuss input open](screenshots/panel-questions.png)
+![Daily Review panel showing rated cards with SRS intervals, a retired card, and an unrated NEW card with rating buttons](screenshots/panel-questions.png)
 
-*Main panel: a card with the ELI5 simplified answer active (ELI5 button lit), rating buttons (ELI5 / AGAIN / HARD / GOT IT / BORING / DISCUSS), and the Discuss follow-up input open on another card.*
+*Main panel: rated cards showing next review interval (→ 1d) after GOT IT, a BORING card marked "retired", a 100-year interval badge on a previously-rated wiki card, and an unrated NEW card with the full ELI5 / AGAIN / HARD / GOT IT / BORING / DISCUSS button row.*
 
 ![Settings panel showing question counts, wiki folder path, and new-knowledge topics list](screenshots/settings-topics.png)
 
