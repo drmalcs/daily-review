@@ -126,6 +126,7 @@ struct QuestionView: View {
             Button("ELI5") { handleELI5Tap() }
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(showELI5 ? Theme.accent : Theme.muted)
+                .shadow(color: showELI5 ? Theme.accent.opacity(0.8) : .clear, radius: 4)
                 .buttonStyle(.plain)
                 .disabled(eli5Loading)
             ratingButton("AGAIN",  rating: .miss,   color: Theme.danger)
