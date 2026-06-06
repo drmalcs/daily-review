@@ -31,6 +31,9 @@ struct QuestionView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
                 typeBadge
+                if question.interval > 1 {
+                    intervalBadge
+                }
                 Text(question.text)
                     .font(.system(size: 13))
                     .foregroundStyle(.primary)
@@ -243,6 +246,16 @@ struct QuestionView: View {
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .foregroundStyle(ratingColor(rating).opacity(0.6))
 
+            if rating == .boring {
+                Text("retired")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.muted.opacity(0.5))
+            } else if question.interval > 0 {
+                Text("→ \(formatInterval(question.interval))")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Theme.muted.opacity(0.5))
+            }
+
             // Wiki actions for non-wiki questions only
             if question.type == .nonWiki {
                 if question.isAddedToWiki {
@@ -279,6 +292,24 @@ struct QuestionView: View {
     }
 
     // MARK: - Helpers
+
+    private var intervalBadge: some View {
+        Text(formatInterval(question.interval))
+            .font(.system(size: 9, weight: .medium, design: .monospaced))
+            .foregroundStyle(Theme.muted.opacity(0.6))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Theme.muted.opacity(0.3), lineWidth: 1))
+    }
+
+    private func formatInterval(_ days: Int) -> String {
+        switch days {
+        case ..<7:   return "\(days)d"
+        case ..<30:  return "\(days / 7)w"
+        case ..<365: return "\(days / 30)mo"
+        default:     return "\(days / 365)y"
+        }
+    }
 
     private var typeBadge: some View {
         let isWiki = question.type == .wiki

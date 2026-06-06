@@ -20,6 +20,10 @@ struct Question: Codable, Identifiable, Sendable, Equatable {
     var srsRating: SRSRating? = nil
     var eli5Answer: String? = nil       // cached ELI5 explanation (generated on demand)
     var eli5IsPreferred: Bool = false   // true when user rated AGAIN/HARD while in ELI5 mode
+    // SM-2 spaced repetition scheduling
+    var interval: Int = 0              // days until next review (0 = new card)
+    var easeFactor: Double = 2.5       // SM-2 ease multiplier (min 1.3)
+    var nextReviewDate: String? = nil  // YYYY-MM-DD; nil = new card, due immediately
 
     // Custom decoder so sessions generated before any given field existed still load.
     init(from decoder: Decoder) throws {
@@ -34,6 +38,9 @@ struct Question: Codable, Identifiable, Sendable, Equatable {
         srsRating       = try c.decodeIfPresent(SRSRating.self, forKey: .srsRating)
         eli5Answer      = try c.decodeIfPresent(String.self,    forKey: .eli5Answer)
         eli5IsPreferred = try c.decodeIfPresent(Bool.self,      forKey: .eli5IsPreferred) ?? false
+        interval        = try c.decodeIfPresent(Int.self,       forKey: .interval)        ?? 0
+        easeFactor      = try c.decodeIfPresent(Double.self,    forKey: .easeFactor)      ?? 2.5
+        nextReviewDate  = try c.decodeIfPresent(String.self,    forKey: .nextReviewDate)
     }
 }
 

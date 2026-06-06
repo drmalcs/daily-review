@@ -50,6 +50,13 @@ final class AppStore: ObservableObject {
         return dir.appendingPathComponent("topics.json")
     }()
 
+    static let libraryFileURL: URL = {
+        let dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".dailyreview")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("cards.json")
+    }()
+
     init() {
         let storedWiki = UserDefaults.standard.integer(forKey: "wikiQuestionCount")
         wikiQuestionCount = storedWiki > 0 ? storedWiki : 5
@@ -153,17 +160,73 @@ final class AppStore: ObservableObject {
     }
 
     func rateQuestion(id: UUID, rating: SRSRating, eli5IsPreferred: Bool = false) async {
-        if let i = wikiQuestions.firstIndex(where: { $0.id == id }) {
-            wikiQuestions[i].srsRating = rating
-            wikiQuestions[i].eli5IsPreferred = eli5IsPreferred
+        func apply(to questions: inout [Question]) -> Question? {
+            guard let i = questions.firstIndex(where: { $0.id == id }) else { return nil }
+            let srs = sm2(card: questions[i], rating: rating)
+            questions[i].srsRating      = rating
+            questions[i].eli5IsPreferred = eli5IsPreferred
+            questions[i].interval       = srs.interval
+            questions[i].easeFactor     = srs.easeFactor
+            questions[i].nextReviewDate = srs.nextReviewDate
+            return questions[i]
+        }
+
+        if let q = apply(to: &wikiQuestions) {
             saveSession()
-        } else if let i = nonWikiQuestions.firstIndex(where: { $0.id == id }) {
-            nonWikiQuestions[i].srsRating = rating
-            nonWikiQuestions[i].eli5IsPreferred = eli5IsPreferred
+            upsertToLibrary(q)
+        } else if let q = apply(to: &nonWikiQuestions) {
             saveSession()
-            if rating == .solid {
-                await addToWiki(question: nonWikiQuestions[i])
+            upsertToLibrary(q)
+            if rating == .solid && !q.isAddedToWiki {
+                await addToWiki(question: q)
             }
+        }
+    }
+
+    // SM-2 algorithm: computes the next interval, ease factor, and review date.
+    // Intervals grow exponentially on each correct answer: 1d → 6d → ~15d → ~38d → …
+    private func sm2(card: Question, rating: SRSRating) -> (interval: Int, easeFactor: Double, nextReviewDate: String) {
+        var n = card.interval
+        var e = card.easeFactor
+
+        switch rating {
+        case .miss:
+            n = 1
+            e = max(1.3, e - 0.20)
+        case .hazy:
+            n = max(1, Int(ceil(Double(max(n, 1)) * 1.2)))
+            e = max(1.3, e - 0.15)
+        case .solid:
+            switch n {
+            case 0:  n = 1
+            case 1:  n = 6
+            default: n = Int(ceil(Double(n) * e))
+            }
+        case .boring:
+            n = 36500  // ~100 years; effectively retired from the deck
+        }
+
+        let next = Calendar.current.date(byAdding: .day, value: max(1, n), to: Date()) ?? Date()
+        return (n, e, DaySession.dateFormatter.string(from: next))
+    }
+
+    private func upsertToLibrary(_ question: Question) {
+        var cards: [Question]
+        if let data = try? Data(contentsOf: AppStore.libraryFileURL),
+           let decoded = try? JSONDecoder().decode([Question].self, from: data) {
+            cards = decoded
+        } else {
+            cards = []
+        }
+        if let i = cards.firstIndex(where: { $0.id == question.id }) {
+            cards[i] = question
+        } else {
+            cards.append(question)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let data = try? encoder.encode(cards) {
+            try? data.write(to: AppStore.libraryFileURL, options: .atomic)
         }
     }
 
