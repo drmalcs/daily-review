@@ -7,8 +7,8 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>/Users/YOUR_USERNAME/.dailyreview/generate.sh</string>
+        <string>/usr/bin/python3</string>
+        <string>/Users/YOUR_USERNAME/.dailyreview/generate.py</string>
     </array>
 
     <key>StartCalendarInterval</key>
